@@ -72,10 +72,11 @@ let digest = (docker
 
 let digest_image = $'($env.REGISTRY)/modules@($digest)'
 print $"(ansi cyan)Signing image:(ansi reset) ($digest_image)"
+let recursive_signing = if $env.GH_EVENT_NAME == "pull_request" { [] } else { ["--recursive"] }
 (cosign sign
     --new-bundle-format=false
     --use-signing-config=false
-    -y --recursive
+    -y ...($recursive_signing)
     --key env://COSIGN_PRIVATE_KEY
     $digest_image)
 (cosign verify

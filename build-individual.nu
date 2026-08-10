@@ -76,6 +76,8 @@ let images = ls modules | each { |moduleDir|
 
 print $"(ansi green_bold)Starting image build(ansi reset)"
 
+let recursive_signing = if $env.GH_EVENT_NAME == "pull_request" { [] } else { ["--recursive"] }
+
 $images | par-each { |img|
 
     print $"(ansi cyan)Building image:(ansi reset) modules/($img.name)"
@@ -113,7 +115,7 @@ $images | par-each { |img|
     (cosign sign
         --new-bundle-format=false
         --use-signing-config=false
-        -y --recursive
+        -y ...($recursive_signing)
         --key env://COSIGN_PRIVATE_KEY
         $digest_image)
     (cosign verify
