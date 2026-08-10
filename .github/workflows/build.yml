@@ -6,6 +6,11 @@ on:
     paths-ignore: # don't rebuild if only documentation has changed
       - "**.md"
   pull_request:
+    types:
+      - opened
+      - synchronize
+      - reopened
+      - labeled
   merge_group:
   workflow_dispatch:
 
@@ -18,6 +23,8 @@ concurrency:
 jobs:
   build:
     name: Build
+    # Apply this label to bypass changed-module filtering for a pull request.
+    if: github.event.action != 'labeled' || github.event.label.name == 'rebuild-all-images'
     permissions:
       packages: write # needed to publish packages
     strategy:
@@ -29,5 +36,6 @@ jobs:
     uses: ./.github/workflows/build-reusable.yml
     with:
       build_script: ${{ matrix.build_script }}
+      rebuild_all_images: ${{ github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'rebuild-all-images') }}
     secrets:
       SIGNING_SECRET: ${{ secrets.SIGNING_SECRET }}
