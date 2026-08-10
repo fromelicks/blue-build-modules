@@ -116,7 +116,7 @@ print $"(ansi green_bold)Starting image build(ansi reset)"
 
 let recursive_signing = if $env.GH_EVENT_NAME == "pull_request" { [] } else { ["--recursive"] }
 
-$images | par-each { |img|
+$images | each { |img|
 
     print $"(ansi cyan)Building image:(ansi reset) modules/($img.name)"
     (docker build .
