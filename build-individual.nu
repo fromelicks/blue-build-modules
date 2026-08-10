@@ -129,7 +129,7 @@ $images | each { |img|
         --annotation $"index,manifest:org.opencontainers.image.created=(date now | date to-timezone UTC | format date '%Y-%m-%dT%H:%M:%SZ')"
         --annotation "index,manifest:org.opencontainers.image.url=https://github.com/blue-build/modules"
         --annotation $"index,manifest:org.opencontainers.image.documentation=https://blue-build.org/reference/modules/($img.name)/"
-        --annotation "index,manifest:org.opencontainers.image.source=https://github.com/blue-build/modules"
+        --annotation $"index,manifest:org.opencontainers.image.source=https://github.com/($env.GITHUB_REPOSITORY)"
         --annotation "index,manifest:org.opencontainers.image.version=nightly"
         --annotation $"index,manifest:org.opencontainers.image.revision=($env.GITHUB_SHA)"
         --annotation "index,manifest:org.opencontainers.image.licenses=Apache-2.0"
