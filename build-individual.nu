@@ -5,7 +5,45 @@ use constants.nu *
 
 print $"(ansi green_bold)Gathering images"
 
-let images = ls modules | each { |moduleDir|
+let is_pull_request = $env.GH_EVENT_NAME == "pull_request"
+let changed_files = if $is_pull_request {
+    git diff --name-only $"($env.GH_BASE_SHA)...HEAD" | lines
+} else {
+    []
+}
+let rebuild_inputs = [
+    ".github/workflows/build-reusable.yml"
+    ".github/workflows/build.yml"
+    "build-individual.nu"
+    "constants.nu"
+    "cosign.key"
+    "cosign.pub"
+    "individual.Containerfile"
+]
+let rebuild_all = (
+    ($is_pull_request == false)
+    or ($env.REBUILD_ALL_IMAGES | into bool)
+    or ($changed_files | any { |path| $path in $rebuild_inputs })
+)
+let changed_modules = (
+    $changed_files
+    | where { |path| $path starts-with "modules/" }
+    | each { |path| $path | split row "/" | get 1 }
+    | uniq
+)
+
+if $is_pull_request and ($rebuild_all == false) {
+    print $"(ansi cyan)Changed modules:(ansi reset) ($changed_modules | str join ' ')"
+}
+
+let module_dirs = (
+    ls modules
+    | where { |moduleDir|
+        $rebuild_all or (($moduleDir.name | path basename) in $changed_modules)
+    }
+)
+
+let images = $module_dirs | each { |moduleDir|
     cd $moduleDir.name
 
     # module is unversioned
@@ -76,7 +114,9 @@ let images = ls modules | each { |moduleDir|
 
 print $"(ansi green_bold)Starting image build(ansi reset)"
 
-$images | par-each { |img|
+let recursive_signing = if $env.GH_EVENT_NAME == "pull_request" { [] } else { ["--recursive"] }
+
+$images | each { |img|
 
     print $"(ansi cyan)Building image:(ansi reset) modules/($img.name)"
     (docker build .
@@ -89,7 +129,7 @@ $images | par-each { |img|
         --annotation $"index,manifest:org.opencontainers.image.created=(date now | date to-timezone UTC | format date '%Y-%m-%dT%H:%M:%SZ')"
         --annotation "index,manifest:org.opencontainers.image.url=https://github.com/blue-build/modules"
         --annotation $"index,manifest:org.opencontainers.image.documentation=https://blue-build.org/reference/modules/($img.name)/"
-        --annotation "index,manifest:org.opencontainers.image.source=https://github.com/blue-build/modules"
+        --annotation $"index,manifest:org.opencontainers.image.source=https://github.com/($env.GITHUB_REPOSITORY)"
         --annotation "index,manifest:org.opencontainers.image.version=nightly"
         --annotation $"index,manifest:org.opencontainers.image.revision=($env.GITHUB_SHA)"
         --annotation "index,manifest:org.opencontainers.image.licenses=Apache-2.0"
@@ -113,7 +153,7 @@ $images | par-each { |img|
     (cosign sign
         --new-bundle-format=false
         --use-signing-config=false
-        -y --recursive
+        -y ...($recursive_signing)
         --key env://COSIGN_PRIVATE_KEY
         $digest_image)
     (cosign verify

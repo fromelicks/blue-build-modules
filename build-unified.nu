@@ -51,7 +51,7 @@ print $"(ansi green_bold)Generated tags for image:(ansi reset) ($tag)"
     --annotation $"index,manifest:org.opencontainers.image.created=(date now | date to-timezone UTC | format date '%Y-%m-%dT%H:%M:%SZ')"
     --annotation "index,manifest:org.opencontainers.image.url=https://github.com/blue-build/modules"
     --annotation "index,manifest:org.opencontainers.image.documentation=https://blue-build.org/"
-    --annotation "index,manifest:org.opencontainers.image.source=https://github.com/blue-build/modules"
+    --annotation $"index,manifest:org.opencontainers.image.source=https://github.com/($env.GITHUB_REPOSITORY)"
     --annotation "index,manifest:org.opencontainers.image.version=nightly"
     --annotation $"index,manifest:org.opencontainers.image.revision=($env.GITHUB_SHA)"
     --annotation "index,manifest:org.opencontainers.image.licenses=Apache-2.0"
@@ -72,10 +72,11 @@ let digest = (docker
 
 let digest_image = $'($env.REGISTRY)/modules@($digest)'
 print $"(ansi cyan)Signing image:(ansi reset) ($digest_image)"
+let recursive_signing = if $env.GH_EVENT_NAME == "pull_request" { [] } else { ["--recursive"] }
 (cosign sign
     --new-bundle-format=false
     --use-signing-config=false
-    -y --recursive
+    -y ...($recursive_signing)
     --key env://COSIGN_PRIVATE_KEY
     $digest_image)
 (cosign verify
