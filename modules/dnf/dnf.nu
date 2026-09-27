@@ -230,10 +230,13 @@ def add_repos [$repos: list]: nothing -> list<string> {
       [/ etc yum.repos.d ($repo | path basename)] | path join
     }
 
-  # Get a list of info for every repo installed
+  # Get a list of info for every repo installed. --keep-order matters: the
+  # repos below are enabled in this order, and dnf5 writes their sections to
+  # repos.override.d/99-config_manager.repo in call order, so completion order
+  # would give the image a different file (and layer digest) on every build.
   let repo_info = dnf repo list
     | get id
-    | par-each {|repo|
+    | par-each --keep-order {|repo|
       dnf repo info $repo
     }
     | flatten
