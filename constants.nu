@@ -2,7 +2,6 @@ export const PLATFORMS = [
   'linux/amd64'
   'linux/amd64/v2'
   'linux/arm64'
-  'linux/arm'
   'linux/arm/v6'
   'linux/arm/v7'
   'linux/386'
