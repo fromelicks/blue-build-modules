@@ -58,5 +58,15 @@ jq --arg image_registry "${IMAGE_REGISTRY}" \
 
 mv "/tmp/POLICY.tmp" "${POLICY_FILE}"
 
+# Some bootc base images keep vendor configuration in both /etc and /usr/etc.
+# ostree-rs-ext normalizes /etc to /usr/etc during import, while post-build
+# rechunkers can reorder the two paths. Keep an existing vendor policy in sync
+# so either import order produces the same signing policy. Do not create
+# /usr/etc on images that do not already provide it.
+VENDOR_POLICY_FILE="/usr/etc/containers/policy.json"
+if [[ -f "${VENDOR_POLICY_FILE}" ]]; then
+  cp "${POLICY_FILE}" "${VENDOR_POLICY_FILE}"
+fi
+
 mv "${MODULE_DIRECTORY}/signing/registry-config.yaml" "${CONTAINER_DIR}/registries.d/${IMAGE_REGISTRY##*/}-${IMAGE_NAME_FILE}.yaml"
 sed -i "s ghcr.io/IMAGENAME ${IMAGE_REGISTRY}/${IMAGE_NAME} g" "${CONTAINER_DIR}/registries.d/${IMAGE_REGISTRY##*/}-${IMAGE_NAME_FILE}.yaml"
